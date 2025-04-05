@@ -9,6 +9,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,14 +35,32 @@ const ProductDetailPage = () => {
   const inWishlist = isInWishlist(product.id);
   
   const handleAddToCart = () => {
+    if (!user) {
+      toast.error('Please login to add items to your cart');
+      return;
+    }
+    
+    if (!product.inStock) {
+      toast.error('This product is out of stock');
+      return;
+    }
+    
     addToCart(product, quantity);
+    toast.success(`${product.name} (x${quantity}) added to cart`);
   };
   
   const toggleWishlist = () => {
+    if (!user) {
+      toast.error('Please login to add items to your wishlist');
+      return;
+    }
+    
     if (inWishlist) {
       removeFromWishlist(product.id);
+      toast.success(`${product.name} removed from wishlist`);
     } else {
       addToWishlist(product);
+      toast.success(`${product.name} added to wishlist`);
     }
   };
   
@@ -63,12 +82,18 @@ const ProductDetailPage = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         {/* Product Image */}
-        <div className="bg-slate-50 rounded-lg overflow-hidden">
-          <img
-            src={product.image || "https://placehold.co/600x400"}
-            alt={product.name}
-            className="w-full h-auto object-contain aspect-square"
-          />
+        <div className="bg-slate-50 rounded-lg overflow-hidden flex items-center justify-center h-[400px]">
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full text-gray-400">
+              No image available
+            </div>
+          )}
         </div>
         
         {/* Product Info */}
@@ -138,7 +163,7 @@ const ProductDetailPage = () => {
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <Button 
               className="w-full sm:w-auto flex-1 gap-2"
-              disabled={!product.inStock || !user}
+              disabled={!product.inStock}
               onClick={handleAddToCart}
             >
               <ShoppingCart className="h-5 w-5" />
@@ -152,7 +177,6 @@ const ProductDetailPage = () => {
                 inWishlist && "bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:text-red-700"
               )}
               onClick={toggleWishlist}
-              disabled={!user}
             >
               <Heart className={cn(
                 "h-5 w-5",

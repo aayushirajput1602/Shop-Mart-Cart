@@ -19,6 +19,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { toast } from "sonner";
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -30,8 +31,17 @@ const Header = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      navigate(`/products?q=${encodeURIComponent(searchQuery)}`);
+      toast.success(`Searching for "${searchQuery}"`);
+    } else {
+      toast.error("Please enter a search term");
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Successfully logged out");
+    navigate('/');
   };
 
   return (
@@ -73,6 +83,9 @@ const Header = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Button type="submit" variant="ghost" size="sm" className="ml-2">
+            Search
+          </Button>
         </form>
 
         {/* Nav Icons */}
@@ -113,7 +126,7 @@ const Header = () => {
                   <DropdownMenuItem asChild>
                     <Link to="/orders">Orders</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={logout}>
+                  <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -175,6 +188,9 @@ const Header = () => {
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
+                  <Button type="submit" variant="ghost" size="sm" className="ml-2">
+                    Search
+                  </Button>
                 </form>
                 
                 {/* Mobile Account Actions */}
@@ -201,7 +217,7 @@ const Header = () => {
                         <Button 
                           variant="destructive" 
                           className="w-full justify-start" 
-                          onClick={logout}
+                          onClick={handleLogout}
                         >
                           <LogOut className="mr-2 h-4 w-4" />
                           Log out

@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { ProductType } from '@/types';
 import { useCart } from '@/contexts/CartContext';
 import { useWishlist } from '@/contexts/WishlistContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: ProductType;
@@ -18,6 +20,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { user } = useAuth();
   
   const inWishlist = isInWishlist(product.id);
 
@@ -25,17 +28,36 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
     e.preventDefault();
     e.stopPropagation();
     
+    if (!user) {
+      toast.error('Please login to add items to your wishlist');
+      return;
+    }
+    
     if (inWishlist) {
       removeFromWishlist(product.id);
+      toast.success(`${product.name} removed from wishlist`);
     } else {
       addToWishlist(product);
+      toast.success(`${product.name} added to wishlist`);
     }
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!user) {
+      toast.error('Please login to add items to your cart');
+      return;
+    }
+    
+    if (!product.inStock) {
+      toast.error('This product is out of stock');
+      return;
+    }
+    
     addToCart(product, 1);
+    toast.success(`${product.name} added to cart`);
   };
 
   return (
@@ -48,11 +70,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           "relative overflow-hidden aspect-square",
           featured && "md:aspect-[4/3]"
         )}>
-          <img
-            src={product.image || "https://placehold.co/600x400"}
-            alt={product.name}
-            className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-          />
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.name}
+              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full h-full bg-slate-100 text-gray-400">
+              No image available
+            </div>
+          )}
           
           {/* Wishlist button */}
           <Button
