@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 const RegisterPage = () => {
@@ -21,8 +22,15 @@ const RegisterPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   
-  const { signup, isLoading } = useAuth();
+  const { signup, isLoading, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +43,8 @@ const RegisterPage = () => {
     
     try {
       await signup(username, email, password);
-      navigate('/');
+      // The AuthContext will now handle the redirect after successful signup and login
+      toast.success('Account created successfully! Redirecting to home page...');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred during registration');
     }
