@@ -17,6 +17,7 @@ interface Product {
   description: string;
   price: number;
   image_url?: string;
+  image?: string; // For backward compatibility
   category: string;
   inventory_count: number;
   rating?: number;
@@ -36,7 +37,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
   const inStock = product.inventory_count > 0;
   const lowStock = inStock && product.inventory_count <= 5;
   
-  const imageUrl = product.image_url || '/placeholder.svg';
+  // Use image_url if available, fall back to image, then to placeholder
+  const imageUrl = product.image_url || product.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
   const rating = product.rating || (Math.random() * 2 + 3).toFixed(1);
 
   const toggleWishlist = (e: React.MouseEvent) => {

@@ -1,18 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from "sonner";
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
-interface WishlistItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  category: string;
-  inventory_count: number;
-}
+import { WishlistItem } from '@/types';
 
 interface WishlistContextType {
   wishlist: WishlistItem[];
@@ -63,7 +53,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         if (data) {
           // Transform the nested data structure
           const transformedWishlist = data.map((item: any) => ({
-            ...item.products
+            id: item.products.id,
+            name: item.products.name,
+            description: item.products.description,
+            price: item.products.price,
+            image_url: item.products.image_url,
+            category: item.products.category,
+            inventory_count: item.products.inventory_count
           }));
           
           setWishlist(transformedWishlist);
@@ -116,14 +112,34 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       
       // Update local state
-      setWishlist(prev => [...prev, product]);
+      const wishlistItem: WishlistItem = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image_url: product.image_url || product.image,
+        category: product.category,
+        inventory_count: product.inventory_count || 0
+      };
+      
+      setWishlist(prev => [...prev, wishlistItem]);
       toast.success(`${product.name} added to wishlist`);
     } catch (error) {
       console.error('Error adding to wishlist:', error);
       toast.error('Failed to add item to wishlist');
       
       // Fallback to local state only
-      setWishlist(prev => [...prev, product]);
+      const wishlistItem: WishlistItem = {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        image_url: product.image_url || product.image,
+        category: product.category,
+        inventory_count: product.inventory_count || 0
+      };
+      
+      setWishlist(prev => [...prev, wishlistItem]);
     } finally {
       setIsLoading(false);
     }

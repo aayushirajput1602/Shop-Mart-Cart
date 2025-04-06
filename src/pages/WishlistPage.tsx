@@ -12,6 +12,7 @@ import { Heart, Trash2, ShoppingCart } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { WishlistItem } from '@/types';
 
 const WishlistPage = () => {
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
@@ -83,13 +84,13 @@ const WishlistPage = () => {
         </Button>
       </div>
 
-      <div className="product-grid">
-        {wishlist.map((product) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+        {wishlist.map((product: WishlistItem) => (
           <Card key={product.id} className="overflow-hidden">
             <div className="aspect-square bg-slate-50 relative">
               <Link to={`/product/${product.id}`}>
                 <img
-                  src={product.image || "https://placehold.co/600x400"}
+                  src={product.image_url || product.image || "https://placehold.co/600x400"}
                   alt={product.name}
                   className="w-full h-full object-cover"
                 />
