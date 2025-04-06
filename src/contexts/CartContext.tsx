@@ -44,12 +44,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         // Get cart items from database
-        const { data: cartItems, error } = await supabase
+        const { data, error } = await supabase
           .from('cart_items')
           .select(`
             id,
             quantity,
-            products (
+            product_id,
+            products!inner(
               id,
               name,
               description,
@@ -63,9 +64,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         if (error) throw error;
 
-        if (cartItems) {
+        if (data) {
           // Transform the nested data structure
-          const transformedCart = cartItems.map((item: any) => ({
+          const transformedCart = data.map((item: any) => ({
             ...item.products,
             quantity: item.quantity
           }));

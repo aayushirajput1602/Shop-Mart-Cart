@@ -41,11 +41,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         // Get wishlist items from database
-        const { data: wishlistItems, error } = await supabase
+        const { data, error } = await supabase
           .from('wishlist_items')
           .select(`
             id,
-            products (
+            product_id,
+            products!inner(
               id,
               name,
               description,
@@ -59,9 +60,9 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
         if (error) throw error;
 
-        if (wishlistItems) {
+        if (data) {
           // Transform the nested data structure
-          const transformedWishlist = wishlistItems.map((item: any) => ({
+          const transformedWishlist = data.map((item: any) => ({
             ...item.products
           }));
           
