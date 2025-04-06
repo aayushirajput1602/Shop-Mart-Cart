@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -507,12 +506,12 @@ const CheckoutPage = () => {
                   <div key={item.id} className="flex justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <img 
-                        src={item.image || "https://placehold.co/600x400"}
-                        alt={item.name}
-                        className="w-12 h-12 object-cover rounded"
+                        src={item.product.image_url || item.product.image || "https://placehold.co/400x300"}
+                        alt={item.product.name}
+                        className="w-20 h-20 object-cover rounded-md"
                       />
                       <span className="flex-1">
-                        {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
+                        {item.product.name} <span className="text-muted-foreground">x{item.quantity}</span>
                       </span>
                     </div>
                     <span>${(item.price * item.quantity).toFixed(2)}</span>
