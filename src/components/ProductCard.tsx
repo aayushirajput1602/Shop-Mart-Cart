@@ -10,6 +10,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ProductType } from '@/types';
 
 interface Product {
   id: string;
@@ -54,7 +55,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
       removeFromWishlist(product.id);
       toast.success(`${product.name} removed from wishlist`);
     } else {
-      addToWishlist(product);
+      addToWishlist({
+        ...product,
+        // Add missing properties to satisfy ProductType
+        rating: Number(rating),
+        inStock: inStock
+      });
       toast.success(`${product.name} added to wishlist`);
     }
   };
@@ -73,7 +79,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
       return;
     }
     
-    addToCart(product, 1);
+    addToCart({
+      ...product,
+      // Add missing properties to satisfy ProductType
+      rating: Number(rating),
+      inStock: inStock
+    }, 1);
     toast.success(`${product.name} added to cart`);
   };
 
