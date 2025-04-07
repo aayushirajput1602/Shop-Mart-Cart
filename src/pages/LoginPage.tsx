@@ -66,11 +66,16 @@ const LoginPage = () => {
     try {
       console.log('Attempting login with:', email);
       await login(email, password);
+      console.log('Login successful');
       toast.success('Successfully logged in');
       navigate('/');
     } catch (err) {
       console.error('Login error:', err);
-      setError(err instanceof Error ? err.message : 'Invalid credentials. Please check your email and password.');
+      if (err instanceof Error && err.message.includes("Invalid login credentials")) {
+        setError("The email or password you entered is incorrect. Please try again.");
+      } else {
+        setError(err instanceof Error ? err.message : 'Invalid credentials. Please check your email and password.');
+      }
       toast.error('Login failed. Please check your credentials.');
     }
   };
@@ -99,7 +104,7 @@ const LoginPage = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                type="email"
+                type="text"
                 placeholder="m@example.com"
                 value={email}
                 onChange={(e) => {
