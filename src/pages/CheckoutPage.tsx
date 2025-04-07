@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
@@ -21,7 +20,7 @@ import { toast } from 'sonner';
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { items, clearCart, totalItems, calculateTotal } = useCart();
+  const { cart, clearCart, totalItems, calculateTotal } = useCart();
   
   const [shippingInfo, setShippingInfo] = useState({
     name: '',
@@ -78,7 +77,7 @@ const CheckoutPage = () => {
     navigate('/checkout/success');
   };
 
-  if (items.length === 0) {
+  if (cart.length === 0) {
     return (
       <div className="container py-20 text-center">
         <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
@@ -274,7 +273,7 @@ const CheckoutPage = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {items.map((item) => (
+                {cart.map((item) => (
                   <div key={item.id} className="flex justify-between">
                     <div className="flex items-center">
                       <div className="ml-3">

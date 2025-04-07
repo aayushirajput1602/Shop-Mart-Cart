@@ -9,7 +9,7 @@ import { Heart } from 'lucide-react';
 
 const WishlistPage: React.FC = () => {
   const { user } = useAuth();
-  const { items, removeFromWishlist } = useWishlist();
+  const { wishlist, removeFromWishlist } = useWishlist();
 
   if (!user) {
     return (
@@ -22,7 +22,7 @@ const WishlistPage: React.FC = () => {
     );
   }
 
-  if (items.length === 0) {
+  if (wishlist.length === 0) {
     return (
       <div className="container py-20 text-center">
         <div className="max-w-md mx-auto">
@@ -43,7 +43,7 @@ const WishlistPage: React.FC = () => {
     <div className="container py-20">
       <h1 className="text-3xl font-bold mb-8">My Wishlist</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {items.map((item) => (
+        {wishlist.map((item) => (
           <ProductCard 
             key={item.id} 
             product={item} 
