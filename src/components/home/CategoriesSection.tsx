@@ -11,19 +11,20 @@ interface CategoriesSectionProps {
 }
 
 const CategoriesSection: React.FC<CategoriesSectionProps> = ({ categories }) => {
-  // Show only top 4 categories
+  // Show only top categories
   const topCategories = categories.slice(0, 4);
 
   return (
     <section className="container py-20">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h6 className="text-sm font-semibold text-primary mb-2">COLLECTIONS</h6>
-          <h2 className="text-3xl font-bold">Shop by Category</h2>
+          <h6 className="text-sm font-semibold text-primary mb-2 tracking-wider">BROWSE COLLECTIONS</h6>
+          <h2 className="text-3xl md:text-4xl font-bold">Shop by Category</h2>
         </div>
-        <Button variant="link" asChild className="text-primary">
-          <Link to="/categories" className="flex items-center">
-            View All <ChevronRight className="h-4 w-4 ml-1" />
+        <Button variant="link" asChild className="text-primary mt-4 md:mt-0">
+          <Link to="/categories" className="flex items-center group">
+            View All Categories 
+            <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
           </Link>
         </Button>
       </div>

@@ -1,70 +1,56 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import HeroBanner from '@/components/home/HeroBanner';
 import CategoriesSection from '@/components/home/CategoriesSection';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import BenefitsSection from '@/components/home/BenefitsSection';
 import NewArrivalsSection from '@/components/home/NewArrivalsSection';
 import NewsletterSection from '@/components/home/NewsletterSection';
-import { ProductType, CategoryType } from '@/types';
+import { categories } from '@/data/products';
+import { ProductType } from '@/types';
+
+const fetchProducts = async () => {
+  const { data, error } = await supabase.from('products').select('*');
+  if (error) throw error;
+  return data;
+};
 
 const HomePage = () => {
-  const [products, setProducts] = useState<ProductType[]>([]);
-  const [categories, setCategories] = useState<CategoryType[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ['products'],
+    queryFn: fetchProducts,
+  });
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const { data: productsData, error } = await supabase
-          .from('products')
-          .select('*');
-        
-        if (error) throw error;
-        
-        if (productsData) {
-          // Add required properties to match ProductType
-          const enhancedProducts = productsData.map(product => ({
-            ...product,
-            rating: product.rating || (Math.random() * 2 + 3),
-            inStock: product.inventory_count > 0
-          }));
-          
-          setProducts(enhancedProducts);
-          
-          // Extract unique categories
-          const uniqueCategories = Array.from(new Set(productsData.map(p => p.category)))
-            .map(category => ({
-              id: category,
-              name: category.charAt(0).toUpperCase() + category.slice(1),
-              description: `Explore our ${category} collection`
-            }));
-          
-          setCategories(uniqueCategories);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  // Map database products to include required fields for ProductType
+  const mappedProducts: ProductType[] = products.map((product: any) => ({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    image_url: product.image_url,
+    category: product.category,
+    inventory_count: product.inventory_count,
+    rating: 4.5, // Default rating since it's not in the database
+    inStock: product.inventory_count > 0,
+  }));
 
   if (isLoading) {
-    return <div className="container py-20">Loading...</div>;
+    return <div className="container py-20 text-center">Loading products...</div>;
+  }
+
+  if (error) {
+    return <div className="container py-20 text-center">Error loading products: {(error as Error).message}</div>;
   }
 
   return (
-    <div className="pb-12">
+    <div>
       <HeroBanner />
       <CategoriesSection categories={categories} />
-      <FeaturedProducts products={products} />
+      <FeaturedProducts products={mappedProducts} />
       <BenefitsSection />
-      <NewArrivalsSection products={products} />
+      <NewArrivalsSection products={mappedProducts} />
       <NewsletterSection />
     </div>
   );

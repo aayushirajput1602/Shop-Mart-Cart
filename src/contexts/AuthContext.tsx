@@ -111,10 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       console.log('Attempting signup with email:', email);
-      // First check if the email is valid
-      if (!email.includes('@') || !email.includes('.')) {
-        throw new Error('Please enter a valid email address');
-      }
       
       // Use signUp with email verification (but we'll also sign in right after)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({

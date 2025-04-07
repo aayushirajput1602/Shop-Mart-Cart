@@ -37,13 +37,10 @@ const RegisterPage = () => {
     }
   }, [user, navigate]);
 
+  // Simplified email validation - just checking it's not empty
   const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
       setEmailError('Email is required');
-      return false;
-    } else if (!regex.test(email)) {
-      setEmailError('Please enter a valid email address');
       return false;
     }
     setEmailError('');

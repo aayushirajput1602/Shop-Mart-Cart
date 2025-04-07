@@ -33,13 +33,10 @@ const LoginPage = () => {
     }
   }, [user, navigate]);
 
+  // Simplified email validation - just checking it's not empty
   const validateEmail = (email: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email) {
       setEmailError('Email is required');
-      return false;
-    } else if (!regex.test(email)) {
-      setEmailError('Please enter a valid email address');
       return false;
     }
     setEmailError('');
@@ -49,9 +46,6 @@ const LoginPage = () => {
   const validatePassword = (password: string) => {
     if (!password) {
       setPasswordError('Password is required');
-      return false;
-    } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
       return false;
     }
     setPasswordError('');
@@ -70,11 +64,13 @@ const LoginPage = () => {
     }
     
     try {
+      console.log('Attempting login with:', email);
       await login(email, password);
       toast.success('Successfully logged in');
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during login');
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Invalid credentials. Please check your email and password.');
       toast.error('Login failed. Please check your credentials.');
     }
   };
