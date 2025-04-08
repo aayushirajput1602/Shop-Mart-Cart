@@ -38,8 +38,30 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
   const inStock = product.inventory_count > 0;
   const lowStock = inStock && product.inventory_count <= 5;
   
-  // Use image_url if available, fall back to image, then to placeholder
-  const imageUrl = product.image_url || product.image || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+  // Use image_url if available, fall back to image from public folder if category exists
+  const getImageUrl = () => {
+    if (product.image_url) {
+      return product.image_url;
+    }
+    
+    if (product.image) {
+      return product.image;
+    }
+    
+    // Map category to an image if no direct image is available
+    const categoryImageMap: Record<string, string> = {
+      'electronics': '/images/laptop.jpg',
+      'clothing': '/images/jacket.jpg',
+      'books': '/images/cookbook.jpg',
+      'beauty': '/images/makeup.jpg',
+      'home': '/images/blender.jpg',
+      'sports': '/images/running-shoes.jpg'
+    };
+    
+    return categoryImageMap[product.category.toLowerCase()] || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+  };
+  
+  const imageUrl = getImageUrl();
   const rating = product.rating || (Math.random() * 2 + 3).toFixed(1);
 
   const toggleWishlist = (e: React.MouseEvent) => {
@@ -102,6 +124,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
             src={imageUrl}
             alt={product.name}
             className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+            }}
           />
           
           {/* Wishlist button */}
@@ -150,14 +176,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
             <h3 className="font-medium text-lg line-clamp-1 hover:underline transition-colors hover:text-primary">{product.name}</h3>
           </Link>
           
-          {featured && (
-            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-              {product.description}
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+            {product.description}
+          </p>
           
           <div className="mt-3 flex items-center justify-between">
             <span className="font-semibold text-lg">${product.price.toFixed(2)}</span>
+            <span className="text-xs text-muted-foreground">{inStock ? `${product.inventory_count} in stock` : 'Out of stock'}</span>
           </div>
         </CardContent>
 

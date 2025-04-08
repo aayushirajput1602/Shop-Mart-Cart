@@ -36,6 +36,7 @@ const CategoryPage = () => {
         if (error) throw error;
         
         if (data) {
+          console.log('Products found for category:', data.length);
           setProducts(data);
           
           // Set category name (capitalize first letter)
@@ -93,8 +94,13 @@ const CategoryPage = () => {
         <div className="text-center py-16 bg-slate-50 rounded-xl">
           <h3 className="text-lg font-medium mb-2">No products found</h3>
           <p className="text-muted-foreground mb-6">
-            We couldn't find any products in this category.
+            We couldn't find any products in this category. This might be because:
           </p>
+          <ul className="list-disc list-inside text-left max-w-md mx-auto mb-6 text-muted-foreground">
+            <li>Products haven't been added to this category yet</li>
+            <li>The category name might be different from what's stored in the database</li>
+            <li>There might be a connection issue with the database</li>
+          </ul>
           <Button asChild>
             <Link to="/products">Browse All Products</Link>
           </Button>

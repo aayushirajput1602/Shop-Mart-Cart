@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,9 +18,25 @@ import {
 } from "@/components/ui/table";
 import { Package, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { OrderType } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+interface OrderType {
+  id: string;
+  userId: string;
+  totalAmount: number;
+  status: "pending" | "processing" | "shipped" | "delivered";
+  paymentStatus: 'paid' | 'pending' | 'failed';
+  createdAt: string;
+  products: { productId: string; quantity: number; price: number }[];
+  shippingAddress: {
+    fullName: string;
+    address: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+}
 
 const OrdersPage = () => {
   const { user } = useAuth();
@@ -35,7 +50,6 @@ const OrdersPage = () => {
       
       setLoading(true);
       try {
-        // Try to fetch orders from Supabase
         const { data, error } = await supabase
           .from('orders')
           .select('*')
@@ -45,11 +59,11 @@ const OrdersPage = () => {
         if (error) throw error;
         
         if (data) {
-          setOrders(data.map(order => ({
+          const typedOrders: OrderType[] = data.map(order => ({
             id: order.id,
             userId: order.user_id,
             totalAmount: order.total_amount,
-            status: order.status,
+            status: order.status as "pending" | "processing" | "shipped" | "delivered",
             paymentStatus: 'paid',
             createdAt: order.created_at,
             products: [],
@@ -60,12 +74,12 @@ const OrdersPage = () => {
               postalCode: '',
               country: '',
             }
-          })));
+          }));
+          setOrders(typedOrders);
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
         
-        // Fallback to localStorage
         const savedOrders = localStorage.getItem(`orders-${user.id}`);
         if (savedOrders) {
           setOrders(JSON.parse(savedOrders));
