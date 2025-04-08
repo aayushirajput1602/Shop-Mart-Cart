@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Package, ShoppingBag, X, ExternalLink } from 'lucide-react';
+import { Package, ShoppingBag, X, ExternalLink, Truck, Clock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -152,6 +153,19 @@ const OrdersPage = () => {
     setSelectedOrder(order);
   };
 
+  const getTrackingInfo = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return { icon: <Package className="h-5 w-5 text-green-500" />, text: "Delivered", description: "Your order has been delivered successfully." };
+      case 'shipped':
+        return { icon: <Truck className="h-5 w-5 text-blue-500" />, text: "Shipped", description: "Your order is on the way to your address." };
+      case 'processing':
+        return { icon: <Clock className="h-5 w-5 text-orange-500" />, text: "Processing", description: "Your order is being prepared for shipping." };
+      default:
+        return { icon: <Clock className="h-5 w-5 text-slate-500" />, text: "Pending", description: "Your order is pending confirmation." };
+    }
+  };
+
   if (!user) {
     return (
       <div className="container py-16 max-w-3xl mx-auto">
@@ -231,6 +245,7 @@ const OrdersPage = () => {
                 <TableHead>Order ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Tracking</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead></TableHead>
@@ -251,6 +266,12 @@ const OrdersPage = () => {
                     `}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getTrackingInfo(order.status).icon}
+                      <span className="text-xs">{getTrackingInfo(order.status).text}</span>
+                    </div>
                   </TableCell>
                   <TableCell>{order.products.length} items</TableCell>
                   <TableCell className="text-right font-medium">
@@ -299,6 +320,16 @@ const OrdersPage = () => {
                             <div className="flex-1">
                               <h3 className="text-sm font-medium mb-2">Total</h3>
                               <p className="font-medium">${order.totalAmount.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-slate-50 p-4 rounded-lg">
+                            <div className="flex items-center gap-3 mb-2">
+                              {getTrackingInfo(order.status).icon}
+                              <div>
+                                <h4 className="font-medium">{getTrackingInfo(order.status).text}</h4>
+                                <p className="text-sm text-muted-foreground">{getTrackingInfo(order.status).description}</p>
+                              </div>
                             </div>
                           </div>
                           
