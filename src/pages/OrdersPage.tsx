@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,10 +17,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Package, ShoppingBag } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Package, ShoppingBag, X, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+
+interface OrderProduct {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image_url?: string;
+}
 
 interface OrderType {
   id: string;
@@ -28,7 +48,7 @@ interface OrderType {
   status: "pending" | "processing" | "shipped" | "delivered";
   paymentStatus: 'paid' | 'pending' | 'failed';
   createdAt: string;
-  products: { productId: string; quantity: number; price: number }[];
+  products: OrderProduct[];
   shippingAddress: {
     fullName: string;
     address: string;
@@ -42,6 +62,7 @@ const OrdersPage = () => {
   const { user } = useAuth();
   const [orders, setOrders] = React.useState<OrderType[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -50,35 +71,74 @@ const OrdersPage = () => {
       
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         
-        if (error) throw error;
+        if (ordersError) throw ordersError;
         
-        if (data) {
-          const typedOrders: OrderType[] = data.map(order => ({
-            id: order.id,
-            userId: order.user_id,
-            totalAmount: order.total_amount,
-            status: order.status as "pending" | "processing" | "shipped" | "delivered",
-            paymentStatus: 'paid',
-            createdAt: order.created_at,
-            products: [],
-            shippingAddress: {
-              fullName: '',
-              address: '',
-              city: '',
-              postalCode: '',
-              country: '',
+        if (ordersData) {
+          const orderPromises = ordersData.map(async (order) => {
+            // Fetch order items for this order
+            const { data: itemsData, error: itemsError } = await supabase
+              .from('order_items')
+              .select(`
+                id, 
+                quantity, 
+                price,
+                product_id,
+                products:product_id (
+                  id,
+                  name,
+                  image_url
+                )
+              `)
+              .eq('order_id', order.id);
+            
+            if (itemsError) {
+              console.error('Error fetching order items:', itemsError);
+              return null;
             }
-          }));
-          setOrders(typedOrders);
+            
+            // Transform order items data
+            const products = itemsData.map(item => ({
+              id: item.product_id,
+              name: item.products?.name || 'Unknown Product',
+              price: Number(item.price),
+              quantity: item.quantity,
+              image_url: item.products?.image_url
+            }));
+            
+            // Return complete order with items
+            return {
+              id: order.id,
+              userId: order.user_id,
+              totalAmount: Number(order.total_amount),
+              status: order.status as "pending" | "processing" | "shipped" | "delivered",
+              paymentStatus: 'paid',
+              createdAt: order.created_at,
+              products: products,
+              shippingAddress: {
+                fullName: '',
+                address: '',
+                city: '',
+                postalCode: '',
+                country: '',
+              }
+            } as OrderType;
+          });
+          
+          const completedOrders = (await Promise.all(orderPromises)).filter(
+            (order): order is OrderType => order !== null
+          );
+          
+          setOrders(completedOrders);
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
+        toast.error('Failed to load your orders');
         
         const savedOrders = localStorage.getItem(`orders-${user.id}`);
         if (savedOrders) {
@@ -92,8 +152,8 @@ const OrdersPage = () => {
     fetchOrders();
   }, [user]);
 
-  const handleViewDetails = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
+  const handleViewDetails = (order: OrderType) => {
+    setSelectedOrder(order);
   };
 
   if (!user) {
@@ -175,6 +235,7 @@ const OrdersPage = () => {
                 <TableHead>Order ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Items</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -187,23 +248,132 @@ const OrdersPage = () => {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      order.status === 'delivered' 
-                        ? 'bg-green-100 text-green-800' 
-                        : order.status === 'shipped'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                    <Badge className={`
+                      ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                        order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'}
+                    `}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>{order.products.length} items</TableCell>
+                  <TableCell className="text-right font-medium">
                     ${order.totalAmount.toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <Button variant="link" onClick={() => handleViewDetails(order.id)}>
-                      Details
-                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="link" onClick={() => handleViewDetails(order)}>
+                          Details
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="flex justify-between items-center">
+                            Order #{order.id.slice(0, 8)}...
+                            <DialogClose className="rounded-full p-1 hover:bg-slate-100">
+                              <X className="h-4 w-4" />
+                            </DialogClose>
+                          </DialogTitle>
+                          <DialogDescription>
+                            Placed on {new Date(order.createdAt).toLocaleDateString()}
+                          </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="space-y-6 my-4">
+                          <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium mb-2">Order Status</h3>
+                              <Badge className={`
+                                ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
+                                  order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-yellow-100 text-yellow-800'}
+                              `}>
+                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium mb-2">Payment</h3>
+                              <Badge className="bg-green-100 text-green-800">
+                                Paid
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex-1">
+                              <h3 className="text-sm font-medium mb-2">Total</h3>
+                              <p className="font-medium">${order.totalAmount.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div>
+                            <h3 className="font-medium mb-4">Order Items</h3>
+                            <div className="space-y-4">
+                              {order.products.map((product, index) => (
+                                <div key={index} className="flex items-center gap-4">
+                                  <div className="h-16 w-16 bg-slate-100 rounded-md overflow-hidden flex-shrink-0">
+                                    {product.image_url ? (
+                                      <img 
+                                        src={product.image_url} 
+                                        alt={product.name}
+                                        className="h-full w-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                        No image
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex-1">
+                                    <div className="flex justify-between">
+                                      <h4 className="font-medium">{product.name}</h4>
+                                      <span className="text-sm text-muted-foreground">
+                                        ${product.price.toFixed(2)} × {product.quantity}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between mt-1">
+                                      <Link 
+                                        to={`/product/${product.id}`}
+                                        className="text-xs text-primary flex items-center hover:underline"
+                                      >
+                                        View product
+                                        <ExternalLink className="h-3 w-3 ml-1" />
+                                      </Link>
+                                      <span className="font-medium">
+                                        ${(product.price * product.quantity).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <Separator />
+                          
+                          <div className="flex justify-between">
+                            <span>Subtotal</span>
+                            <span>${order.totalAmount.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Shipping</span>
+                            <span>Free</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-medium">
+                            <span>Total</span>
+                            <span>${order.totalAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </TableCell>
                 </TableRow>
               ))}

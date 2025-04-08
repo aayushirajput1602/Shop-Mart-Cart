@@ -15,6 +15,8 @@ interface Product {
   image_url?: string;
   category: string;
   inventory_count: number;
+  rating?: number;
+  inStock?: boolean;
 }
 
 const CategoryPage = () => {
@@ -22,22 +24,39 @@ const CategoryPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState('');
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
-        // Fetch products by category
+        if (!categoryId) {
+          throw new Error('Category ID is missing');
+        }
+        
+        console.log('Fetching products for category:', categoryId);
+        
+        // Fetch products by category - make sure to use the category without capitalization
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .eq('category', categoryId);
+          .eq('category', categoryId.toLowerCase());
         
         if (error) throw error;
         
         if (data) {
-          console.log('Products found for category:', data.length);
-          setProducts(data);
+          console.log('Products found:', data.length);
+          
+          // Transform products to include required fields
+          const transformedProducts = data.map(product => ({
+            ...product,
+            rating: product.rating || 4.5,
+            inStock: product.inventory_count > 0
+          }));
+          
+          setProducts(transformedProducts);
           
           // Set category name (capitalize first letter)
           if (categoryId) {
@@ -46,6 +65,7 @@ const CategoryPage = () => {
         }
       } catch (error) {
         console.error('Error fetching products:', error);
+        setError('Failed to load products. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -65,6 +85,29 @@ const CategoryPage = () => {
           {Array.from({ length: 8 }).map((_, index) => (
             <Skeleton key={index} className="h-[320px] w-full rounded-lg" />
           ))}
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="container py-12">
+        <div className="mb-8">
+          <Link to="/categories" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Categories
+          </Link>
+          
+          <h1 className="text-3xl font-bold">{categoryName || 'Category'}</h1>
+        </div>
+        
+        <div className="text-center py-16 bg-slate-50 rounded-xl">
+          <h3 className="text-lg font-medium mb-2">Error Loading Products</h3>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
         </div>
       </div>
     );

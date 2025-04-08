@@ -3,6 +3,9 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductCard from '@/components/ProductCard';
 import { ProductType } from '@/types';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ChevronRight } from 'lucide-react';
 
 interface NewArrivalsSectionProps {
   products: ProductType[];
@@ -11,6 +14,12 @@ interface NewArrivalsSectionProps {
 const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => {
   // Get random products for new arrivals
   const newArrivals = [...products].sort(() => 0.5 - Math.random()).slice(0, 8);
+
+  const getCategoryProducts = (category: string) => {
+    return products
+      .filter((p) => p.category.toLowerCase() === category.toLowerCase())
+      .slice(0, 4);
+  };
 
   return (
     <section className="container py-20">
@@ -38,38 +47,61 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => 
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+          <div className="flex justify-center mt-8">
+            <Button variant="outline" asChild>
+              <Link to="/products" className="flex items-center group">
+                View All Products
+                <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+              </Link>
+            </Button>
+          </div>
         </TabsContent>
         
         <TabsContent value="electronics" className="mt-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {products
-              .filter((p) => p.category === 'electronics')
-              .slice(0, 4)
-              .map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            {getCategoryProducts('electronics').map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <Button variant="outline" asChild>
+              <Link to="/category/electronics" className="flex items-center group">
+                View All Electronics
+                <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+              </Link>
+            </Button>
           </div>
         </TabsContent>
         
         <TabsContent value="clothing" className="mt-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {products
-              .filter((p) => p.category === 'clothing')
-              .slice(0, 4)
-              .map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            {getCategoryProducts('clothing').map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <Button variant="outline" asChild>
+              <Link to="/category/clothing" className="flex items-center group">
+                View All Clothing
+                <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+              </Link>
+            </Button>
           </div>
         </TabsContent>
         
         <TabsContent value="beauty" className="mt-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {products
-              .filter((p) => p.category === 'beauty')
-              .slice(0, 4)
-              .map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            {getCategoryProducts('beauty').map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+          <div className="flex justify-center mt-8">
+            <Button variant="outline" asChild>
+              <Link to="/category/beauty" className="flex items-center group">
+                View All Beauty Products
+                <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform duration-200" />
+              </Link>
+            </Button>
           </div>
         </TabsContent>
       </Tabs>
