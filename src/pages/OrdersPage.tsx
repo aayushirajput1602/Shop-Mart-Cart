@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -81,7 +80,6 @@ const OrdersPage = () => {
         
         if (ordersData) {
           const orderPromises = ordersData.map(async (order) => {
-            // Fetch order items for this order
             const { data: itemsData, error: itemsError } = await supabase
               .from('order_items')
               .select(`
@@ -102,7 +100,6 @@ const OrdersPage = () => {
               return null;
             }
             
-            // Transform order items data
             const products = itemsData.map(item => ({
               id: item.product_id,
               name: item.products?.name || 'Unknown Product',
@@ -111,7 +108,6 @@ const OrdersPage = () => {
               image_url: item.products?.image_url
             }));
             
-            // Return complete order with items
             return {
               id: order.id,
               userId: order.user_id,

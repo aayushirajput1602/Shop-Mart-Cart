@@ -6,22 +6,11 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  category: string;
-  inventory_count: number;
-  rating?: number;
-  inStock?: boolean;
-}
+import { ProductType } from '@/types';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +38,12 @@ const CategoryPage = () => {
         if (data) {
           console.log('Products found:', data.length);
           
-          // Transform products to include required fields
+          // Transform products to include required fields for ProductType
           const transformedProducts = data.map(product => ({
             ...product,
-            rating: product.rating || 4.5,
+            rating: 4.5, // Add default rating
             inStock: product.inventory_count > 0
-          }));
+          })) as ProductType[];
           
           setProducts(transformedProducts);
           
