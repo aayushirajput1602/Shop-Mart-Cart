@@ -60,7 +60,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
         // Add missing properties to satisfy ProductType
         rating: Number(rating),
         inStock: inStock
-      });
+      } as ProductType);
       toast.success(`${product.name} added to wishlist`);
     }
   };
@@ -84,7 +84,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
       // Add missing properties to satisfy ProductType
       rating: Number(rating),
       inStock: inStock
-    }, 1);
+    } as ProductType, 1);
     toast.success(`${product.name} added to cart`);
   };
 
@@ -108,7 +108,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-3 right-3 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm"
+            className={cn(
+              "absolute top-3 right-3 rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-sm",
+              inWishlist && "bg-red-50 text-red-500 hover:bg-red-100"
+            )}
             onClick={toggleWishlist}
           >
             <Heart className={cn(
@@ -160,7 +163,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
 
         <CardFooter className="p-5 pt-0">
           <Button 
-            className="w-full gap-2 rounded-lg shadow-sm" 
+            className={cn(
+              "w-full gap-2 rounded-lg shadow-sm",
+              !inStock && "opacity-70"
+            )}
             disabled={!inStock}
             onClick={handleAddToCart}
           >

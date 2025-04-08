@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -20,20 +20,67 @@ import {
 import { Package, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderType } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const OrdersPage = () => {
   const { user } = useAuth();
   const [orders, setOrders] = React.useState<OrderType[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const navigate = useNavigate();
 
   React.useEffect(() => {
-    if (user) {
-      // In a real app, this would fetch from an API
-      const savedOrders = localStorage.getItem(`orders-${user.id}`);
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
+    const fetchOrders = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Try to fetch orders from Supabase
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data) {
+          setOrders(data.map(order => ({
+            id: order.id,
+            userId: order.user_id,
+            totalAmount: order.total_amount,
+            status: order.status,
+            paymentStatus: 'paid',
+            createdAt: order.created_at,
+            products: [],
+            shippingAddress: {
+              fullName: '',
+              address: '',
+              city: '',
+              postalCode: '',
+              country: '',
+            }
+          })));
+        }
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        
+        // Fallback to localStorage
+        const savedOrders = localStorage.getItem(`orders-${user.id}`);
+        if (savedOrders) {
+          setOrders(JSON.parse(savedOrders));
+        }
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchOrders();
   }, [user]);
+
+  const handleViewDetails = (orderId: string) => {
+    navigate(`/orders/${orderId}`);
+  };
 
   if (!user) {
     return (
@@ -51,6 +98,25 @@ const OrdersPage = () => {
             <Button asChild>
               <Link to="/login">Login</Link>
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="container py-16 max-w-3xl mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Your Orders</CardTitle>
+          </CardHeader>
+          <CardContent className="py-8">
+            <div className="animate-pulse space-y-4">
+              <div className="h-6 bg-slate-200 rounded w-3/4 mx-auto"></div>
+              <div className="h-4 bg-slate-200 rounded w-1/2 mx-auto"></div>
+              <div className="h-10 bg-slate-200 rounded w-1/3 mx-auto"></div>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -102,21 +168,27 @@ const OrdersPage = () => {
             <TableBody>
               {orders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
+                  <TableCell className="font-medium">{order.id.slice(0, 8)}...</TableCell>
                   <TableCell>
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">
-                      {order.status}
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      order.status === 'delivered' 
+                        ? 'bg-green-100 text-green-800' 
+                        : order.status === 'shipped'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
                     ${order.totalAmount.toFixed(2)}
                   </TableCell>
                   <TableCell>
-                    <Button variant="link" asChild>
-                      <Link to={`/orders/${order.id}`}>Details</Link>
+                    <Button variant="link" onClick={() => handleViewDetails(order.id)}>
+                      Details
                     </Button>
                   </TableCell>
                 </TableRow>

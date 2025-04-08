@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/contexts/CartContext';
@@ -16,6 +17,21 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Check, CreditCard, Truck } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface FormErrors {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  email?: string;
+  phone?: string;
+  cardNumber?: string;
+  cardName?: string;
+  expDate?: string;
+  cvv?: string;
+}
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -39,42 +55,223 @@ const CheckoutPage = () => {
     cvv: '',
   });
 
+  const [errors, setErrors] = useState<FormErrors>({});
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleShippingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setShippingInfo(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error when user types
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
   };
 
   const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPaymentInfo(prev => ({ ...prev, [name]: value }));
+    let formattedValue = value;
+    
+    // Format card number with spaces
+    if (name === 'cardNumber') {
+      formattedValue = value.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim().slice(0, 19);
+    }
+    
+    // Format expiration date
+    if (name === 'expDate') {
+      formattedValue = value.replace(/\D/g, '');
+      if (formattedValue.length > 2) {
+        formattedValue = formattedValue.slice(0, 2) + '/' + formattedValue.slice(2, 4);
+      }
+    }
+    
+    setPaymentInfo(prev => ({ ...prev, [name]: formattedValue }));
+    
+    // Clear error when user types
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const validateShippingForm = () => {
+    const newErrors: FormErrors = {};
+    
+    if (!shippingInfo.name.trim()) newErrors.name = 'Name is required';
+    if (!shippingInfo.address.trim()) newErrors.address = 'Address is required';
+    if (!shippingInfo.city.trim()) newErrors.city = 'City is required';
+    if (!shippingInfo.state.trim()) newErrors.state = 'State is required';
+    if (!shippingInfo.zip.trim()) newErrors.zip = 'ZIP code is required';
+    if (!shippingInfo.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingInfo.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validatePaymentForm = () => {
+    const newErrors: FormErrors = {};
+    
+    const cardNumberStripped = paymentInfo.cardNumber.replace(/\s/g, '');
+    
+    if (!cardNumberStripped) {
+      newErrors.cardNumber = 'Card number is required';
+    } else if (cardNumberStripped.length < 14 || cardNumberStripped.length > 16) {
+      newErrors.cardNumber = 'Card number must be between 14-16 digits';
+    }
+    
+    if (!paymentInfo.cardName.trim()) newErrors.cardName = 'Name on card is required';
+    
+    if (!paymentInfo.expDate) {
+      newErrors.expDate = 'Expiration date is required';
+    } else {
+      const [month, year] = paymentInfo.expDate.split('/');
+      const currentYear = new Date().getFullYear() % 100;
+      const currentMonth = new Date().getMonth() + 1;
+      
+      if (!month || !year || month.length !== 2 || year.length !== 2) {
+        newErrors.expDate = 'Enter date in MM/YY format';
+      } else if (parseInt(month) < 1 || parseInt(month) > 12) {
+        newErrors.expDate = 'Month must be between 01-12';
+      } else if (
+        (parseInt(year) < currentYear) || 
+        (parseInt(year) === currentYear && parseInt(month) < currentMonth)
+      ) {
+        newErrors.expDate = 'Card has expired';
+      }
+    }
+    
+    if (!paymentInfo.cvv) {
+      newErrors.cvv = 'CVV is required';
+    } else if (paymentInfo.cvv.length < 3 || paymentInfo.cvv.length > 4) {
+      newErrors.cvv = 'CVV must be 3-4 digits';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmitShipping = (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation
-    if (!shippingInfo.name || !shippingInfo.address || !shippingInfo.city || 
-        !shippingInfo.state || !shippingInfo.zip || !shippingInfo.email) {
-      toast.error('Please fill out all required fields');
-      return;
+    
+    if (validateShippingForm()) {
+      setStep(2);
     }
-    setStep(2);
   };
 
-  const handleSubmitPayment = (e: React.FormEvent) => {
+  const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Basic validation
-    if (!paymentInfo.cardNumber || !paymentInfo.cardName || 
-        !paymentInfo.expDate || !paymentInfo.cvv) {
-      toast.error('Please fill out all payment fields');
+    
+    if (!validatePaymentForm()) {
       return;
     }
     
-    // Process order
-    toast.success('Order placed successfully!');
-    clearCart();
-    navigate('/checkout/success');
+    setIsSubmitting(true);
+    
+    try {
+      // Calculate total with tax
+      const subtotal = calculateTotal();
+      const tax = subtotal * 0.07;
+      const total = subtotal + tax;
+      
+      // Create order in database if user is logged in
+      if (user) {
+        // Create order in database
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            user_id: user.id,
+            total_amount: total,
+            status: 'pending',
+          })
+          .select('id')
+          .single();
+        
+        if (orderError) throw orderError;
+        
+        if (orderData) {
+          // Create order items
+          const orderItems = cart.map(item => ({
+            order_id: orderData.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.product.price
+          }));
+          
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItems);
+          
+          if (itemsError) throw itemsError;
+          
+          // Also save to localStorage as backup
+          const order = {
+            id: orderData.id,
+            userId: user.id,
+            totalAmount: total,
+            products: cart.map(item => ({
+              productId: item.product_id,
+              quantity: item.quantity,
+              price: item.product.price
+            })),
+            shippingAddress: {
+              fullName: shippingInfo.name,
+              address: shippingInfo.address,
+              city: shippingInfo.city,
+              postalCode: shippingInfo.zip,
+              country: shippingInfo.state
+            },
+            status: 'pending',
+            paymentStatus: 'paid',
+            createdAt: new Date().toISOString()
+          };
+          
+          // Store in localStorage
+          const existingOrders = JSON.parse(localStorage.getItem(`orders-${user.id}`) || '[]');
+          localStorage.setItem(`orders-${user.id}`, JSON.stringify([order, ...existingOrders]));
+        }
+      } else {
+        // Just for demo purposes - normally this would be handled by the backend
+        const orderId = `order-${Date.now()}`;
+        const order = {
+          id: orderId,
+          userId: 'guest',
+          totalAmount: total,
+          products: cart.map(item => ({
+            productId: item.product_id,
+            quantity: item.quantity,
+            price: item.product.price
+          })),
+          shippingAddress: {
+            fullName: shippingInfo.name,
+            address: shippingInfo.address,
+            city: shippingInfo.city,
+            postalCode: shippingInfo.zip,
+            country: shippingInfo.state
+          },
+          status: 'pending',
+          paymentStatus: 'paid',
+          createdAt: new Date().toISOString()
+        };
+        
+        // Store in localStorage
+        const guestOrders = JSON.parse(localStorage.getItem('guest-orders') || '[]');
+        localStorage.setItem('guest-orders', JSON.stringify([order, ...guestOrders]));
+      }
+      
+      // Clear cart and redirect to success page
+      clearCart();
+      toast.success('Order placed successfully!');
+      navigate('/checkout/success');
+    } catch (error) {
+      console.error('Error processing order:', error);
+      toast.error('There was a problem processing your order. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (cart.length === 0) {
@@ -113,8 +310,9 @@ const CheckoutPage = () => {
                       name="name" 
                       value={shippingInfo.name} 
                       onChange={handleShippingChange}
-                      required
+                      className={errors.name ? "border-red-500" : ""}
                     />
+                    {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="address">Street Address</Label>
@@ -123,8 +321,9 @@ const CheckoutPage = () => {
                       name="address" 
                       value={shippingInfo.address} 
                       onChange={handleShippingChange}
-                      required
+                      className={errors.address ? "border-red-500" : ""}
                     />
+                    {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -134,8 +333,9 @@ const CheckoutPage = () => {
                         name="city" 
                         value={shippingInfo.city} 
                         onChange={handleShippingChange}
-                        required
+                        className={errors.city ? "border-red-500" : ""}
                       />
+                      {errors.city && <p className="text-red-500 text-sm">{errors.city}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="state">State</Label>
@@ -144,8 +344,9 @@ const CheckoutPage = () => {
                         name="state" 
                         value={shippingInfo.state} 
                         onChange={handleShippingChange}
-                        required
+                        className={errors.state ? "border-red-500" : ""}
                       />
+                      {errors.state && <p className="text-red-500 text-sm">{errors.state}</p>}
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -155,19 +356,21 @@ const CheckoutPage = () => {
                       name="zip" 
                       value={shippingInfo.zip} 
                       onChange={handleShippingChange}
-                      required
+                      className={errors.zip ? "border-red-500" : ""}
                     />
+                    {errors.zip && <p className="text-red-500 text-sm">{errors.zip}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input 
                       id="email" 
                       name="email" 
-                      type="email"
+                      type="email" 
                       value={shippingInfo.email} 
                       onChange={handleShippingChange}
-                      required
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone (optional)</Label>
@@ -206,11 +409,11 @@ const CheckoutPage = () => {
                         placeholder="1234 5678 9012 3456"
                         value={paymentInfo.cardNumber} 
                         onChange={handlePaymentChange}
-                        required
-                        maxLength={19}
+                        className={errors.cardNumber ? "border-red-500" : ""}
                       />
                       <CreditCard className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     </div>
+                    {errors.cardNumber && <p className="text-red-500 text-sm">{errors.cardNumber}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cardName">Name on Card</Label>
@@ -219,8 +422,9 @@ const CheckoutPage = () => {
                       name="cardName" 
                       value={paymentInfo.cardName} 
                       onChange={handlePaymentChange}
-                      required
+                      className={errors.cardName ? "border-red-500" : ""}
                     />
+                    {errors.cardName && <p className="text-red-500 text-sm">{errors.cardName}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -231,8 +435,10 @@ const CheckoutPage = () => {
                         placeholder="MM/YY"
                         value={paymentInfo.expDate} 
                         onChange={handlePaymentChange}
-                        required
+                        maxLength={5}
+                        className={errors.expDate ? "border-red-500" : ""}
                       />
+                      {errors.expDate && <p className="text-red-500 text-sm">{errors.expDate}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="cvv">CVV</Label>
@@ -242,18 +448,26 @@ const CheckoutPage = () => {
                         placeholder="123"
                         value={paymentInfo.cvv} 
                         onChange={handlePaymentChange}
-                        required
                         maxLength={4}
+                        className={errors.cvv ? "border-red-500" : ""}
                       />
+                      {errors.cvv && <p className="text-red-500 text-sm">{errors.cvv}</p>}
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex-col space-y-2">
-                  <Button type="submit" className="w-full">Place Order</Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Processing...' : 'Place Order'}
+                  </Button>
                   <Button 
                     type="button"
                     variant="outline" 
                     onClick={() => setStep(1)}
+                    disabled={isSubmitting}
                   >
                     Back to Shipping
                   </Button>
@@ -276,7 +490,16 @@ const CheckoutPage = () => {
                 {cart.map((item) => (
                   <div key={item.id} className="flex justify-between">
                     <div className="flex items-center">
-                      <div className="ml-3">
+                      {item.product.image_url && (
+                        <div className="w-12 h-12 rounded overflow-hidden bg-slate-100 mr-3">
+                          <img 
+                            src={item.product.image_url} 
+                            alt={item.product.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div>
                         <p className="font-medium">{item.product.name}</p>
                         <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
