@@ -1,8 +1,10 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import CategoryCard from '@/components/CategoryCard';
 import { categories } from '@/data/products';
 import { Grid3X3, Tag } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const CategoriesPage = () => {
   return (
@@ -17,7 +19,22 @@ const CategoriesPage = () => {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {categories.map(category => (
-          <CategoryCard key={category.id} category={category} />
+          <Link key={category.id} to={`/category/${category.id}`} className="block">
+            <div className="group relative h-60 rounded-2xl overflow-hidden transition-transform hover:transform hover:scale-[1.02]">
+              <img 
+                src={category.image} 
+                alt={category.name}
+                className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-700" 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-6 flex flex-col justify-end">
+                <h3 className="text-white text-xl font-semibold mb-1">{category.name}</h3>
+                <p className="text-white/80 text-sm mb-4">{category.productCount} Products</p>
+                <Button variant="outline" className="w-full bg-white/20 backdrop-blur-sm text-white border-white/30 hover:bg-white/30 hover:text-white">
+                  Browse Category
+                </Button>
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
     </div>

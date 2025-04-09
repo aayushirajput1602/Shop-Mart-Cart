@@ -5,7 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import { ProductType } from '@/types';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Star, ShoppingCart, Heart } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 interface NewArrivalsSectionProps {
   products: ProductType[];
@@ -44,9 +44,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => 
         </div>
         
         <TabsContent value="all" className="mt-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {newArrivals.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
           <div className="flex justify-center mt-8">
@@ -60,9 +60,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => 
         </TabsContent>
         
         <TabsContent value="electronics" className="mt-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {getCategoryProducts('electronics').map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
           <div className="flex justify-center mt-8">
@@ -76,9 +76,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => 
         </TabsContent>
         
         <TabsContent value="clothing" className="mt-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {getCategoryProducts('clothing').map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
           <div className="flex justify-center mt-8">
@@ -92,9 +92,9 @@ const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => 
         </TabsContent>
         
         <TabsContent value="beauty" className="mt-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {getCategoryProducts('beauty').map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} compact />
             ))}
           </div>
           <div className="flex justify-center mt-8">

@@ -87,6 +87,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
     };
 
     fetchCart();
+
+    // Set up real-time subscription for product inventory and cart updates
+    const channel = supabase
+      .channel('cart-updates')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'products' 
+        },
+        (payload) => {
+          // When a product is updated, refresh the cart to get latest inventory info
+          if (user) {
+            fetchCart();
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'cart_items',
+          filter: `user_id=eq.${user?.id}`
+        },
+        (payload) => {
+          // When cart items change, refresh the cart
+          if (user) {
+            fetchCart();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Save cart to localStorage as backup
@@ -102,6 +140,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Check if product is in stock and has enough inventory
+    if (product.inventory_count < quantity) {
+      toast.error(`Sorry, there are only ${product.inventory_count} units available`);
+      return;
+    }
+
+    if (!product.inStock) {
+      toast.error('This product is out of stock');
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -109,23 +158,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existingCartItem = cart.find(item => item.product_id === product.id);
       
       if (existingCartItem) {
+        // Check if we have enough inventory for the combined quantity
+        const newQuantity = existingCartItem.quantity + quantity;
+        
+        if (product.inventory_count < newQuantity) {
+          toast.error(`Sorry, we don't have enough in stock. You can add ${product.inventory_count - existingCartItem.quantity} more.`);
+          setIsLoading(false);
+          return;
+        }
+        
         // Update quantity in database
         const { error } = await supabase
           .from('cart_items')
           .update({ 
-            quantity: existingCartItem.quantity + quantity,
+            quantity: newQuantity,
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', user.id)
-          .eq('product_id', product.id);
+          .eq('id', existingCartItem.id);
 
         if (error) throw error;
         
         // Update local state
         setCart(prevCart => 
           prevCart.map(item => 
-            item.product_id === product.id 
-              ? { ...item, quantity: item.quantity + quantity } 
+            item.id === existingCartItem.id 
+              ? { ...item, quantity: newQuantity } 
               : item
           )
         );
