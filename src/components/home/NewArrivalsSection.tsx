@@ -5,7 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import { ProductType } from '@/types';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Star, ShoppingCart, Heart } from 'lucide-react';
 
 interface NewArrivalsSectionProps {
   products: ProductType[];

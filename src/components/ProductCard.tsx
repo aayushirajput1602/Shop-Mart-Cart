@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ShoppingCart, Star, Shield, Clock } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Shield, Clock, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +124,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           <img
             src={imageUrl}
             alt={product.name}
-            className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
+            className={cn(
+              "object-cover w-full h-full transition-transform duration-500 group-hover:scale-110",
+              !inStock && "opacity-70"
+            )}
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = 'https://images.unsplash.com/photo-1586952518485-11b180e92764?q=80&w=1000';
@@ -149,7 +152,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           
           {/* Stock status badge */}
           {!inStock ? (
-            <Badge variant="destructive" className="absolute top-3 left-3 shadow-sm">
+            <Badge variant="destructive" className="absolute top-3 left-3 shadow-sm flex items-center gap-1">
+              <XCircle className="h-3 w-3" />
               Out of stock
             </Badge>
           ) : lowStock ? (
@@ -158,6 +162,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
               Only {product.inventory_count} left
             </Badge>
           ) : null}
+          
+          {/* Out of stock overlay */}
+          {!inStock && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center">
+              <span className="text-red-600 font-semibold text-xl mb-2">Out of Stock</span>
+              <span className="text-muted-foreground text-sm">Check back later</span>
+            </div>
+          )}
         </div>
       </Link>
 
@@ -187,10 +199,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           </div>
         </CardContent>
 
-        <CardFooter className="p-5 pt-0">
+        <CardFooter className="p-5 pt-0 flex gap-2">
           <Button 
             className={cn(
-              "w-full gap-2 rounded-lg shadow-sm",
+              "flex-1 gap-2 rounded-lg shadow-sm",
               !inStock && "opacity-70"
             )}
             disabled={!inStock}
@@ -198,6 +210,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
           >
             <ShoppingCart className="h-4 w-4" />
             {inStock ? "Add to Cart" : "Out of Stock"}
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className={cn(
+              "gap-2 rounded-lg",
+              inWishlist && "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-500 border-red-200"
+            )}
+            onClick={toggleWishlist}
+          >
+            <Heart className={cn(
+              "h-4 w-4",
+              inWishlist && "fill-red-500"
+            )} />
+            {inWishlist ? "Saved" : "Save"}
           </Button>
         </CardFooter>
       </div>

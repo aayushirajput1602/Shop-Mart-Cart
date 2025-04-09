@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Album, ShieldAlert } from 'lucide-react';
+import { Album, ShieldAlert, ImageIcon, UploadCloud } from 'lucide-react';
 
 const ImagesPage = () => {
   const { user } = useAuth();
@@ -44,22 +44,61 @@ const ImagesPage = () => {
 
   return (
     <div className="container py-12">
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-6">
         <Album className="h-7 w-7 text-primary" />
         <h1 className="text-3xl font-bold">Image Management</h1>
       </div>
-      <p className="text-muted-foreground mb-8 max-w-3xl">
-        Upload and manage your product images here. You can add images by uploading files from your device
-        or by entering URL links to external images. All uploaded images will be available for use in your product listings.
-      </p>
-      <div className="max-w-5xl mx-auto">
-        <ImageManager />
+      
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8 mb-8">
+        <Card className="h-fit">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-primary" /> 
+              Image Library
+            </CardTitle>
+            <CardDescription>
+              Manage all your product images in one place
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Upload high-quality images for your products to enhance your listings. All uploaded images will be available for use across the entire store.
+            </p>
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">Tips for best results:</h4>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Use high-resolution images (1000×1000px minimum)</li>
+                <li>• Keep file sizes below 5MB</li>
+                <li>• Use consistent lighting and angles</li>
+                <li>• Include white background product shots</li>
+                <li>• Show products from multiple angles</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
         
-        <div className="mt-8 flex justify-end">
-          <Button variant="outline" asChild>
-            <Link to="/profile">Back to Profile</Link>
-          </Button>
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UploadCloud className="h-5 w-5 text-primary" />
+                Upload Images
+              </CardTitle>
+              <CardDescription>
+                Add new product images to your library
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ImageManager />
+            </CardContent>
+          </Card>
         </div>
+      </div>
+      
+      <div className="mt-8 flex justify-end">
+        <Button variant="outline" asChild>
+          <Link to="/profile">Back to Profile</Link>
+        </Button>
       </div>
     </div>
   );

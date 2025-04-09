@@ -64,7 +64,30 @@ const CategoryPage = () => {
     };
     
     if (categoryId) {
+      // Set up real-time subscription for product inventory updates
+      const channel = supabase
+        .channel('product-updates')
+        .on(
+          'postgres_changes',
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'products' 
+          },
+          (payload) => {
+            // When a product is updated, refresh the product list
+            if (categoryId) {
+              fetchProducts();
+            }
+          }
+        )
+        .subscribe();
+
       fetchProducts();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [categoryId]);
   
