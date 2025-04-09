@@ -38,7 +38,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
   const inStock = product.inventory_count > 0;
   const lowStock = inStock && product.inventory_count <= 5;
   
-  // Use image_url if available, fall back to image from public folder if category exists
+  // Use image_url if available, fall back to category-based image if needed
   const getImageUrl = () => {
     if (product.image_url) {
       return product.image_url;
@@ -48,17 +48,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
       return product.image;
     }
     
-    // Map category to an image if no direct image is available
+    // Map category to a high-quality image if no direct image is available
     const categoryImageMap: Record<string, string> = {
-      'electronics': '/images/laptop.jpg',
-      'clothing': '/images/jacket.jpg',
-      'books': '/images/cookbook.jpg',
-      'beauty': '/images/makeup.jpg',
-      'home': '/images/blender.jpg',
-      'sports': '/images/running-shoes.jpg'
+      'electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?q=80&w=1000',
+      'clothing': 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=1000',
+      'books': 'https://images.unsplash.com/photo-1510172951991-856a62a9cde5?q=80&w=1000',
+      'beauty': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=1000',
+      'home': 'https://images.unsplash.com/photo-1556020685-ae41abfc9365?q=80&w=1000',
+      'sports': 'https://images.unsplash.com/photo-1576678927484-cc907957088c?q=80&w=1000',
+      'toys': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=1000'
     };
     
-    return categoryImageMap[product.category.toLowerCase()] || 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+    return categoryImageMap[product.category.toLowerCase()] || 'https://images.unsplash.com/photo-1586952518485-11b180e92764?q=80&w=1000';
   };
   
   const imageUrl = getImageUrl();
@@ -126,7 +127,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false }) 
             className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+              target.src = 'https://images.unsplash.com/photo-1586952518485-11b180e92764?q=80&w=1000';
             }}
           />
           

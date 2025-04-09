@@ -7,9 +7,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Album, ShieldAlert } from 'lucide-react';
 
 const ImagesPage = () => {
   const { user } = useAuth();
@@ -19,7 +21,13 @@ const ImagesPage = () => {
       <div className="container py-12 max-w-3xl mx-auto">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Image Management</CardTitle>
+            <CardTitle className="text-2xl flex items-center justify-center gap-2">
+              <ShieldAlert className="h-6 w-6 text-amber-500" />
+              <span>Image Management</span>
+            </CardTitle>
+            <CardDescription>
+              Manage your product images in one central location
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center py-8">
             <p className="text-muted-foreground text-center mb-6">
@@ -36,7 +44,14 @@ const ImagesPage = () => {
 
   return (
     <div className="container py-12">
-      <h1 className="text-3xl font-bold mb-8">Image Management</h1>
+      <div className="flex items-center gap-3 mb-8">
+        <Album className="h-7 w-7 text-primary" />
+        <h1 className="text-3xl font-bold">Image Management</h1>
+      </div>
+      <p className="text-muted-foreground mb-8 max-w-3xl">
+        Upload and manage your product images here. You can add images by uploading files from your device
+        or by entering URL links to external images. All uploaded images will be available for use in your product listings.
+      </p>
       <div className="max-w-5xl mx-auto">
         <ImageManager />
         

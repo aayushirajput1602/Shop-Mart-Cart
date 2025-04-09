@@ -7,9 +7,10 @@ import { ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProductType } from '@/types';
+import { toast } from 'sonner';
 
 const CategoryPage = () => {
-  const { categoryId } = useParams<{ categoryId: string }>();
+  const { id: categoryId } = useParams<{ id: string }>();
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState('');
@@ -27,7 +28,7 @@ const CategoryPage = () => {
         
         console.log('Fetching products for category:', categoryId);
         
-        // Fetch products by category - make sure to use the category without capitalization
+        // Fetch products by category using the lowercase category ID
         const { data, error } = await supabase
           .from('products')
           .select('*')
@@ -51,6 +52,8 @@ const CategoryPage = () => {
           if (categoryId) {
             setCategoryName(categoryId.charAt(0).toUpperCase() + categoryId.slice(1));
           }
+        } else {
+          toast.error("Failed to fetch products");
         }
       } catch (error) {
         console.error('Error fetching products:', error);
