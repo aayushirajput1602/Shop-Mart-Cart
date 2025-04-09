@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types';
 import { Link } from 'react-router-dom';
-import { Clock, Package, ExternalLink } from 'lucide-react';
+import { Clock, Package, ExternalLink, Truck, Image, ShoppingBag } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -38,6 +37,7 @@ interface OrderType {
     id: string;
     name: string;
     quantity: number;
+    image_url?: string;
   }[];
 }
 
@@ -55,7 +55,6 @@ const ProfilePage = () => {
       
       try {
         setIsLoading(true);
-        // Fetch from the profiles table which is in the public schema
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -85,7 +84,6 @@ const ProfilePage = () => {
       
       setIsLoadingOrders(true);
       try {
-        // Get orders from database
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('*')
@@ -105,7 +103,8 @@ const ProfilePage = () => {
                 product_id,
                 products:product_id (
                   id,
-                  name
+                  name,
+                  image_url
                 )
               `)
               .eq('order_id', order.id);
@@ -118,7 +117,8 @@ const ProfilePage = () => {
             const products = itemsData.map(item => ({
               id: item.product_id,
               name: item.products?.name || 'Unknown Product',
-              quantity: item.quantity
+              quantity: item.quantity,
+              image_url: item.products?.image_url
             }));
             
             return {
@@ -188,13 +188,34 @@ const ProfilePage = () => {
   const getTrackingInfo = (status: string) => {
     switch (status) {
       case 'delivered':
-        return "Your order has been delivered";
+        return { 
+          icon: <Package className="h-5 w-5 text-green-500" />, 
+          text: "Delivered", 
+          description: "Your order has been delivered successfully.",
+          date: "Delivered on Apr 8, 2025"
+        };
       case 'shipped':
-        return "Your order is on the way";
+        return { 
+          icon: <Truck className="h-5 w-5 text-blue-500" />, 
+          text: "Shipped", 
+          description: "Your order is on the way to your address.",
+          date: "Shipped on Apr 6, 2025",
+          tracking: "TRK12345678"
+        };
       case 'processing':
-        return "Your order is being processed";
+        return { 
+          icon: <Clock className="h-5 w-5 text-orange-500" />, 
+          text: "Processing", 
+          description: "Your order is being prepared for shipping.",
+          date: "Processing since Apr 5, 2025"
+        };
       default:
-        return "Your order is pending";
+        return { 
+          icon: <Clock className="h-5 w-5 text-slate-500" />, 
+          text: "Pending", 
+          description: "Your order is pending confirmation.",
+          date: "Order placed on Apr 4, 2025"
+        };
     }
   };
   
@@ -221,9 +242,10 @@ const ProfilePage = () => {
       <h1 className="text-3xl font-bold mb-8">My Account</h1>
       
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
+        <TabsList className="grid w-full grid-cols-3 mb-8">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="orders">Orders</TabsTrigger>
+          <TabsTrigger value="images">Images</TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -292,51 +314,121 @@ const ProfilePage = () => {
                 </div>
               ) : orders.length === 0 ? (
                 <div className="text-center py-8">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <p className="text-muted-foreground mb-4">You haven't placed any orders yet.</p>
                   <Button asChild>
                     <Link to="/products">Browse Products</Link>
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableCaption>Your order history</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Tracking</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.id.slice(0, 8)}...</TableCell>
-                        <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>{getStatusBadge(order.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{getTrackingInfo(order.status)}</span>
+                <div className="space-y-6">
+                  {orders.map((order) => (
+                    <Card key={order.id} className="overflow-hidden">
+                      <CardHeader className="pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">Order #{order.id.slice(0, 8)}...</h3>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Placed on {new Date(order.createdAt).toLocaleDateString()}
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">${order.totalAmount.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button variant="link" asChild>
-                            <Link to={`/orders`} className="flex items-center">
-                              Details
-                              <ExternalLink className="h-4 w-4 ml-1" />
-                            </Link>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <div className="text-sm">
+                            <span className="font-medium">${order.totalAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="pb-2">
+                        <div className="bg-slate-50 p-4 rounded-lg mb-4">
+                          <div className="flex items-center gap-3">
+                            {getTrackingInfo(order.status).icon}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{getTrackingInfo(order.status).text}</h4>
+                                {order.status === 'shipped' && (
+                                  <Badge variant="outline" className="ml-2">
+                                    Tracking: {getTrackingInfo(order.status).tracking}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{getTrackingInfo(order.status).description}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{getTrackingInfo(order.status).date}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {order.products.slice(0, 2).map((product, idx) => (
+                            <div key={idx} className="flex items-center gap-3">
+                              <div className="h-12 w-12 bg-slate-100 rounded flex-shrink-0 overflow-hidden">
+                                {product.image_url ? (
+                                  <img 
+                                    src={product.image_url} 
+                                    alt={product.name} 
+                                    className="h-full w-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
+                                    <Package className="h-6 w-6" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{product.name}</p>
+                                <p className="text-xs text-muted-foreground">Qty: {product.quantity}</p>
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {order.products.length > 2 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{order.products.length - 2} more items
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                      
+                      <CardFooter className="flex justify-end pt-2">
+                        <Button variant="link" asChild className="h-auto p-0">
+                          <Link to={`/orders`} className="flex items-center text-sm">
+                            View Order Details
+                            <ExternalLink className="h-3 w-3 ml-1" />
+                          </Link>
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="images">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Image className="h-5 w-5 mr-2" />
+                Image Management
+              </CardTitle>
+              <CardDescription>
+                Manage product images for your store
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center py-8">
+              <p className="text-muted-foreground text-center mb-6">
+                Go to the image management page to upload and manage your product images.
+              </p>
+              <Button asChild>
+                <Link to="/images">Manage Images</Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

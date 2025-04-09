@@ -12,8 +12,10 @@ interface NewArrivalsSectionProps {
 }
 
 const NewArrivalsSection: React.FC<NewArrivalsSectionProps> = ({ products }) => {
-  // Get random products for new arrivals
-  const newArrivals = [...products].sort(() => 0.5 - Math.random()).slice(0, 8);
+  // Get the most recent products for new arrivals (sort by id for demonstration)
+  const newArrivals = [...products]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .slice(0, 8);
 
   const getCategoryProducts = (category: string) => {
     return products

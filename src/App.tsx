@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
+import ImagesPage from './pages/ImagesPage';
 
 const queryClient = new QueryClient();
 
@@ -50,6 +50,7 @@ const App = () => (
                   <Route path="login" element={<LoginPage />} />
                   <Route path="register" element={<RegisterPage />} />
                   <Route path="search" element={<ProductsPage />} />
+                  <Route path="images" element={<ImagesPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Route>
               </Routes>

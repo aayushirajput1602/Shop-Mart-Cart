@@ -26,7 +26,7 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Package, ShoppingBag, X, ExternalLink, Truck, Clock } from 'lucide-react';
+import { Package, ShoppingBag, X, ExternalLink, Truck, Clock, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -58,11 +58,19 @@ interface OrderType {
   };
 }
 
+interface TrackingEvent {
+  date: string;
+  status: string;
+  location: string;
+  description: string;
+}
+
 const OrdersPage = () => {
   const { user } = useAuth();
   const [orders, setOrders] = React.useState<OrderType[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderType | null>(null);
+  const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([]);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -118,11 +126,11 @@ const OrdersPage = () => {
               createdAt: order.created_at,
               products: products,
               shippingAddress: {
-                fullName: '',
-                address: '',
-                city: '',
-                postalCode: '',
-                country: '',
+                fullName: 'John Doe',
+                address: '123 Main St',
+                city: 'Anytown',
+                postalCode: '12345',
+                country: 'USA'
               }
             } as OrderType;
           });
@@ -136,11 +144,6 @@ const OrdersPage = () => {
       } catch (error) {
         console.error('Error fetching orders:', error);
         toast.error('Failed to load your orders');
-        
-        const savedOrders = localStorage.getItem(`orders-${user.id}`);
-        if (savedOrders) {
-          setOrders(JSON.parse(savedOrders));
-        }
       } finally {
         setLoading(false);
       }
@@ -151,21 +154,113 @@ const OrdersPage = () => {
 
   const handleViewDetails = (order: OrderType) => {
     setSelectedOrder(order);
+    
+    // Generate mock tracking events based on order status
+    const events: TrackingEvent[] = [];
+    
+    // Always add order placed event
+    events.push({
+      date: new Date(order.createdAt).toLocaleDateString(),
+      status: 'Order Placed',
+      location: 'Online Store',
+      description: 'Your order has been placed successfully'
+    });
+    
+    if (['processing', 'shipped', 'delivered'].includes(order.status)) {
+      const processingDate = new Date(order.createdAt);
+      processingDate.setDate(processingDate.getDate() + 1);
+      
+      events.push({
+        date: processingDate.toLocaleDateString(),
+        status: 'Processing',
+        location: 'Warehouse',
+        description: 'Your order is being prepared for shipping'
+      });
+    }
+    
+    if (['shipped', 'delivered'].includes(order.status)) {
+      const shippedDate = new Date(order.createdAt);
+      shippedDate.setDate(shippedDate.getDate() + 2);
+      
+      events.push({
+        date: shippedDate.toLocaleDateString(),
+        status: 'Shipped',
+        location: 'Distribution Center',
+        description: 'Your order has been shipped and is on the way'
+      });
+      
+      if (order.status === 'shipped') {
+        const inTransitDate = new Date(order.createdAt);
+        inTransitDate.setDate(inTransitDate.getDate() + 3);
+        
+        events.push({
+          date: inTransitDate.toLocaleDateString(),
+          status: 'In Transit',
+          location: 'Local Courier',
+          description: 'Your package is with the delivery courier'
+        });
+      }
+    }
+    
+    if (order.status === 'delivered') {
+      const deliveredDate = new Date(order.createdAt);
+      deliveredDate.setDate(deliveredDate.getDate() + 4);
+      
+      events.push({
+        date: deliveredDate.toLocaleDateString(),
+        status: 'Delivered',
+        location: 'Destination',
+        description: 'Your package has been delivered'
+      });
+    }
+    
+    setTrackingEvents(events);
   };
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'delivered':
+        return <Badge className="bg-green-100 text-green-800">Delivered</Badge>;
+      case 'shipped':
+        return <Badge className="bg-blue-100 text-blue-800">Shipped</Badge>;
+      case 'processing':
+        return <Badge className="bg-yellow-100 text-yellow-800">Processing</Badge>;
+      default:
+        return <Badge className="bg-slate-100 text-slate-800">Pending</Badge>;
+    }
+  };
+  
   const getTrackingInfo = (status: string) => {
     switch (status) {
       case 'delivered':
-        return { icon: <Package className="h-5 w-5 text-green-500" />, text: "Delivered", description: "Your order has been delivered successfully." };
+        return { 
+          icon: <Package className="h-5 w-5 text-green-500" />, 
+          text: "Delivered", 
+          description: "Your order has been delivered successfully",
+          tracking: "TRK12345678"
+        };
       case 'shipped':
-        return { icon: <Truck className="h-5 w-5 text-blue-500" />, text: "Shipped", description: "Your order is on the way to your address." };
+        return { 
+          icon: <Truck className="h-5 w-5 text-blue-500" />, 
+          text: "Shipped", 
+          description: "Your order is on the way to your address",
+          tracking: "TRK12345678"
+        };
       case 'processing':
-        return { icon: <Clock className="h-5 w-5 text-orange-500" />, text: "Processing", description: "Your order is being prepared for shipping." };
+        return { 
+          icon: <Clock className="h-5 w-5 text-orange-500" />, 
+          text: "Processing", 
+          description: "Your order is being prepared for shipping"
+        };
       default:
-        return { icon: <Clock className="h-5 w-5 text-slate-500" />, text: "Pending", description: "Your order is pending confirmation." };
+        return { 
+          icon: <Clock className="h-5 w-5 text-slate-500" />, 
+          text: "Pending", 
+          description: "Your order is pending confirmation"
+        };
     }
   };
-
+  
   if (!user) {
     return (
       <div className="container py-16 max-w-3xl mx-auto">
@@ -259,18 +354,17 @@ const OrdersPage = () => {
                     {new Date(order.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Badge className={`
-                      ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                        order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'}
-                    `}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </Badge>
+                    {getStatusBadge(order.status)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getTrackingInfo(order.status).icon}
-                      <span className="text-xs">{getTrackingInfo(order.status).text}</span>
+                      <span className="text-sm">{getTrackingInfo(order.status).text}</span>
+                      {(order.status === 'shipped' || order.status === 'delivered') && (
+                        <Badge variant="outline" className="ml-auto">
+                          #{getTrackingInfo(order.status).tracking}
+                        </Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{order.products.length} items</TableCell>
@@ -301,13 +395,7 @@ const OrdersPage = () => {
                           <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                             <div className="flex-1">
                               <h3 className="text-sm font-medium mb-2">Order Status</h3>
-                              <Badge className={`
-                                ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 
-                                  order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-yellow-100 text-yellow-800'}
-                              `}>
-                                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                              </Badge>
+                              {getStatusBadge(order.status)}
                             </div>
                             
                             <div className="flex-1">
@@ -324,13 +412,42 @@ const OrdersPage = () => {
                           </div>
                           
                           <div className="bg-slate-50 p-4 rounded-lg">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3 mb-4">
                               {getTrackingInfo(order.status).icon}
                               <div>
                                 <h4 className="font-medium">{getTrackingInfo(order.status).text}</h4>
                                 <p className="text-sm text-muted-foreground">{getTrackingInfo(order.status).description}</p>
                               </div>
+                              {(order.status === 'shipped' || order.status === 'delivered') && (
+                                <Badge variant="outline" className="ml-auto">
+                                  Tracking: #{getTrackingInfo(order.status).tracking}
+                                </Badge>
+                              )}
                             </div>
+                            
+                            {/* Tracking timeline */}
+                            {trackingEvents.length > 0 && (
+                              <div className="mt-4 space-y-4 relative">
+                                <h4 className="text-sm font-medium mb-3">Tracking Timeline</h4>
+                                
+                                <div className="border-l-2 border-slate-200 pl-6 space-y-6 ml-2">
+                                  {trackingEvents.map((event, index) => (
+                                    <div key={index} className="relative">
+                                      <div className="absolute -left-[30px] bg-slate-200 h-4 w-4 rounded-full border-2 border-white" />
+                                      {index === 0 && (
+                                        <div className="absolute -left-[30px] bg-primary h-4 w-4 rounded-full border-2 border-white" />
+                                      )}
+                                      <div className="mb-1">
+                                        <span className="text-sm font-medium">{event.status}</span>
+                                        <span className="text-xs text-muted-foreground ml-2">{event.date}</span>
+                                      </div>
+                                      <p className="text-xs text-muted-foreground">{event.location}</p>
+                                      <p className="text-xs">{event.description}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                           <Separator />
@@ -353,7 +470,7 @@ const OrdersPage = () => {
                                       />
                                     ) : (
                                       <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
-                                        No image
+                                        <Package className="h-6 w-6" />
                                       </div>
                                     )}
                                   </div>
