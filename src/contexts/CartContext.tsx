@@ -68,7 +68,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
             id: item.id,
             product_id: item.product_id,
             quantity: item.quantity,
-            product: item.products
+            product: {
+              ...item.products,
+              rating: 4.5, // Add default rating
+              inStock: item.products.inventory_count > 0
+            }
           }));
           
           setCart(transformedCart);
@@ -140,13 +144,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Check if product is in stock and has enough inventory
-    if (product.inventory_count < quantity) {
-      toast.error(`Sorry, there are only ${product.inventory_count} units available`);
+    // Get the latest inventory count from the database
+    const { data: latestProduct, error: productError } = await supabase
+      .from('products')
+      .select('inventory_count')
+      .eq('id', product.id)
+      .single();
+
+    if (productError) {
+      console.error('Error checking inventory:', productError);
+      toast.error('Failed to check product availability');
       return;
     }
 
-    if (!product.inStock) {
+    const currentInventory = latestProduct.inventory_count;
+
+    // Check if product is in stock and has enough inventory
+    if (currentInventory < quantity) {
+      toast.error(`Sorry, there are only ${currentInventory} units available`);
+      return;
+    }
+
+    if (currentInventory === 0) {
       toast.error('This product is out of stock');
       return;
     }
@@ -161,8 +180,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Check if we have enough inventory for the combined quantity
         const newQuantity = existingCartItem.quantity + quantity;
         
-        if (product.inventory_count < newQuantity) {
-          toast.error(`Sorry, we don't have enough in stock. You can add ${product.inventory_count - existingCartItem.quantity} more.`);
+        if (currentInventory < newQuantity) {
+          toast.error(`Sorry, we don't have enough in stock. You can add ${currentInventory - existingCartItem.quantity} more.`);
           setIsLoading(false);
           return;
         }
@@ -207,9 +226,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
             id: data.id,
             product_id: product.id,
             quantity,
-            product
+            product: {
+              ...product,
+              inventory_count: currentInventory
+            }
           }
         ]);
+      }
+
+      // Update the product inventory in the database
+      const newInventory = currentInventory - quantity;
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          inventory_count: newInventory,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', product.id);
+
+      if (updateError) {
+        console.error('Error updating inventory:', updateError);
+        toast.error('Failed to update inventory');
       }
       
       toast.success(`${product.name} added to cart`);

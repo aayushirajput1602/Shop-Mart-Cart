@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Star, Shield, Clock, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,21 +10,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ProductType } from '@/types';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url?: string;
-  image?: string; // For backward compatibility
-  category: string;
-  inventory_count: number;
-  rating?: number;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProductCardProps {
-  product: Product;
+  product: ProductType;
   featured?: boolean;
   compact?: boolean;
 }
@@ -34,12 +22,59 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { user } = useAuth();
+  const [currentInventory, setCurrentInventory] = useState(product.inventory_count);
+  const [isInventoryLoading, setIsInventoryLoading] = useState(false);
   
   const inWishlist = isInWishlist(product.id);
-  const inStock = product.inventory_count > 0;
-  const lowStock = inStock && product.inventory_count <= 5;
+  const inStock = currentInventory > 0;
+  const lowStock = inStock && currentInventory <= 5;
   
-  // Use image_url if available, fall back to category-based image if needed
+  useEffect(() => {
+    const channel = supabase
+      .channel(`product-${product.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'products',
+          filter: `id=eq.${product.id}`
+        },
+        (payload: any) => {
+          if (payload.new) {
+            setCurrentInventory(payload.new.inventory_count);
+          }
+        }
+      )
+      .subscribe();
+
+    const fetchLatestInventory = async () => {
+      setIsInventoryLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('inventory_count')
+          .eq('id', product.id)
+          .single();
+          
+        if (error) throw error;
+        if (data) {
+          setCurrentInventory(data.inventory_count);
+        }
+      } catch (err) {
+        console.error('Error fetching inventory:', err);
+      } finally {
+        setIsInventoryLoading(false);
+      }
+    };
+    
+    fetchLatestInventory();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [product.id]);
+  
   const getImageUrl = () => {
     if (product.image_url) {
       return product.image_url;
@@ -49,7 +84,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
       return product.image;
     }
     
-    // Map category to a high-quality image if no direct image is available
     const categoryImageMap: Record<string, string> = {
       'electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?q=80&w=1000',
       'clothing': 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=1000',
@@ -57,7 +91,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
       'beauty': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=1000',
       'home': 'https://images.unsplash.com/photo-1556020685-ae41abfc9365?q=80&w=1000',
       'sports': 'https://images.unsplash.com/photo-1576678927484-cc907957088c?q=80&w=1000',
-      'toys': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=1000'
+      'toys': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?q=80&w=1000',
+      'gaming': 'https://images.unsplash.com/photo-1607853202273-797f1c22a38e?q=80&w=1000',
+      'furniture': 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=1000',
+      'jewelry': 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=1000'
     };
     
     return categoryImageMap[product.category.toLowerCase()] || 'https://images.unsplash.com/photo-1586952518485-11b180e92764?q=80&w=1000';
@@ -81,7 +118,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
     } else {
       addToWishlist({
         ...product,
-        // Add missing properties to satisfy ProductType
         rating: Number(rating),
         inStock: inStock
       } as ProductType);
@@ -105,11 +141,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
     
     addToCart({
       ...product,
-      // Add missing properties to satisfy ProductType
+      inventory_count: currentInventory,
       rating: Number(rating),
       inStock: inStock
     } as ProductType, 1);
-    toast.success(`${product.name} added to cart`);
   };
 
   if (compact) {
@@ -130,7 +165,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
               }}
             />
             
-            {/* Stock status badge */}
             {!inStock ? (
               <Badge variant="destructive" className="absolute top-3 left-3 shadow-sm flex items-center gap-1">
                 <XCircle className="h-3 w-3" />
@@ -139,11 +173,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
             ) : lowStock ? (
               <Badge variant="secondary" className="absolute top-3 left-3 bg-amber-100 text-amber-700 border-amber-200 shadow-sm">
                 <Clock className="h-3 w-3 mr-1" />
-                Only {product.inventory_count} left
+                Only {currentInventory} left
               </Badge>
             ) : null}
             
-            {/* Out of stock overlay */}
             {!inStock && (
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center">
                 <span className="text-red-600 font-semibold text-xl mb-2">Out of Stock</span>
@@ -171,11 +204,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
               !inStock && "opacity-70"
             )}
             size="sm"
-            disabled={!inStock}
+            disabled={!inStock || isInventoryLoading}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-3 w-3" />
-            {inStock ? "Add" : "Out of Stock"}
+            {isInventoryLoading ? (
+              <span className="flex items-center">
+                <Clock className="h-3 w-3 animate-spin mr-1" />
+                Loading...
+              </span>
+            ) : inStock ? (
+              <>
+                <ShoppingCart className="h-3 w-3" />
+                Add
+              </>
+            ) : (
+              <>
+                <XCircle className="h-3 w-3" />
+                Out of Stock
+              </>
+            )}
           </Button>
           
           <Button 
@@ -221,7 +268,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
             }}
           />
           
-          {/* Wishlist button */}
           <Button
             variant="ghost"
             size="icon"
@@ -237,7 +283,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
             )} />
           </Button>
           
-          {/* Stock status badge */}
           {!inStock ? (
             <Badge variant="destructive" className="absolute top-3 left-3 shadow-sm flex items-center gap-1">
               <XCircle className="h-3 w-3" />
@@ -246,11 +291,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
           ) : lowStock ? (
             <Badge variant="secondary" className="absolute top-3 left-3 bg-amber-100 text-amber-700 border-amber-200 shadow-sm">
               <Clock className="h-3 w-3 mr-1" />
-              Only {product.inventory_count} left
+              Only {currentInventory} left
             </Badge>
           ) : null}
           
-          {/* Out of stock overlay */}
           {!inStock && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center">
               <span className="text-red-600 font-semibold text-xl mb-2">Out of Stock</span>
@@ -282,7 +326,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
           
           <div className="mt-3 flex items-center justify-between">
             <span className="font-semibold text-lg">${product.price.toFixed(2)}</span>
-            <span className="text-xs text-muted-foreground">{inStock ? `${product.inventory_count} in stock` : 'Out of stock'}</span>
+            <span className="text-xs text-muted-foreground">
+              {isInventoryLoading ? (
+                <span className="flex items-center">
+                  <Clock className="h-3 w-3 animate-spin mr-1" />
+                  Checking...
+                </span>
+              ) : inStock ? (
+                `${currentInventory} in stock`
+              ) : (
+                'Out of stock'
+              )}
+            </span>
           </div>
         </CardContent>
 
@@ -292,11 +347,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, featured = false, co
               "flex-1 gap-2 rounded-lg shadow-sm",
               !inStock && "opacity-70"
             )}
-            disabled={!inStock}
+            disabled={!inStock || isInventoryLoading}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4" />
-            {inStock ? "Add to Cart" : "Out of Stock"}
+            {isInventoryLoading ? (
+              <span className="flex items-center">
+                <Clock className="h-4 w-4 animate-spin mr-1" />
+                Checking Stock...
+              </span>
+            ) : inStock ? (
+              <>
+                <ShoppingCart className="h-4 w-4" />
+                Add to Cart
+              </>
+            ) : (
+              <>
+                <XCircle className="h-4 w-4" />
+                Out of Stock
+              </>
+            )}
           </Button>
           
           <Button 
