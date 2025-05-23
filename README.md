@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Welcome to your Lovable project
 
 ## Project info
@@ -71,3 +72,7 @@ Yes it is!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+=======
+# Shop-Mart-Cart
+An intuitive and efficient shopping cart application designed to enhance the online shopping experience. Users can browse products, add or remove items from the cart, view real-time price updates, and proceed seamlessly to checkout. Built with a responsive UI using HTML, CSS, and JavaScript, and integrated with backend technologies .
+>>>>>>> 3e92fdc8e673abda262c131c0368d239bc9f8400
